@@ -3,14 +3,15 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+require("dotenv").config();
 
 const app = express();
-
+const PORT = process.env.PORT || 3000;
 const STORAGE_DIR = process.env.STORAGE_DIR || "vault";
 
 // ensure storage exists
 if (!fs.existsSync(STORAGE_DIR)) {
-  fs.mkdirSync(STORAGE_DIR);
+  fs.mkdirSync(STORAGE_DIR, { recursive: true });
 }
 
 // simple auth
@@ -40,7 +41,6 @@ const upload = multer({
 // upload file
 app.post("/upload", auth, upload.single("file"), (req, res) => {
   const fileUrl = `/files/${req.file.filename}`;
-
   res.json({
     id: req.file.filename,
     url: fileUrl,
@@ -60,14 +60,13 @@ app.head("/files/:id", (req, res) => {
 // delete file
 app.delete("/files/:id", auth, (req, res) => {
   const filePath = path.join(STORAGE_DIR, req.params.id);
-
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "Not found" });
   }
-
   fs.unlinkSync(filePath);
   res.json({ deleted: true });
 });
+
 app.get("/", (req, res) => {
   res.status(200).send(`
     <html>
@@ -134,6 +133,6 @@ app.use((req, res) => {
   `);
 });
 
-app.listen(3000, () => {
-  console.log("Media Vault running on port 3000");
+app.listen(PORT, () => {
+  console.log(`Media Vault running on port ${PORT}`);
 });
