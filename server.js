@@ -68,6 +68,71 @@ app.delete("/files/:id", auth, (req, res) => {
   fs.unlinkSync(filePath);
   res.json({ deleted: true });
 });
+app.get("/", (req, res) => {
+  res.status(200).send(`
+    <html>
+      <head>
+        <title>Media Vault</title>
+        <style>
+          body {
+            background: #0f0f0f;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+          }
+          h1 {
+            font-size: 48px;
+            margin: 0;
+          }
+          p {
+            opacity: 0.6;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>MEDIA VAULT</h1>
+        <p>Storage API is running</p>
+      </body>
+    </html>
+  `);
+});
+
+app.use((req, res) => {
+  res.status(404).send(`
+    <html>
+      <head>
+        <title>404</title>
+        <style>
+          body {
+            background: black;
+            color: red;
+            font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+          }
+          h1 {
+            font-size: 80px;
+            margin: 0;
+          }
+          p {
+            opacity: 0.7;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>404</h1>
+        <p>Route not found</p>
+      </body>
+    </html>
+  `);
+});
 
 app.listen(3000, () => {
   console.log("Media Vault running on port 3000");
