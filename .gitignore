@@ -35,6 +35,7 @@ vault/
 uploads/
 storage/
 files/
+your-bucket
 
 # Optional editor files
 .vscode/

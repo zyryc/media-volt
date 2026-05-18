@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — Media Vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="page-dashboard">
+
+  <header class="dash-header">
+    <div class="dash-header-brand">
+      <span class="brand-name">MEDIA VAULT</span>
+    </div>
+    <div class="dash-header-right">
+      <span class="dash-user"><%= user.displayName %></span>
+      <button class="btn btn-primary btn-sm" onclick="openModal()">+ New Token</button>
+      <a href="/logout" class="btn btn-ghost btn-sm">Logout</a>
+    </div>
+  </header>
+
+  <main class="dash-main">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val"><%= tokens.length %></div>
+        <div class="stat-label">API Tokens</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val"><%= fileCount %></div>
+        <div class="stat-label">Your Files</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val"><%= vaultSize %></div>
+        <div class="stat-label">Storage Used</div>
+      </div>
+    </div>
+
+    <!-- Tokens table -->
+    <div class="section-header">
+      <h2 class="section-title">API Tokens</h2>
+      <p class="section-hint">Use <code>x-token</code> header to authenticate API requests</p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Token</th>
+            <th>Secret</th>
+            <th>Created</th>
+            <th>Last Used</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tokenTable">
+          <% if (tokens.length === 0) { %>
+            <tr id="emptyRow">
+              <td colspan="6" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">⬡</div>
+                  <p>No tokens yet</p>
+                  <small>Create a token to start uploading files via the API</small>
+                </div>
+              </td>
+            </tr>
+          <% } else { %>
+            <% tokens.forEach(function(t) { %>
+              <tr id="row-<%= t.id %>">
+                <td class="td-name"><%= t.label %></td>
+                <td>
+                  <code class="secret-pill" data-val="<%= t.token %>"
+                    onclick="toggleSecret(this)" title="Click to reveal">
+                    ••••••••••••••••
+                  </code>
+                </td>
+                <td>
+                  <code class="secret-pill" data-val="<%= t.secret %>"
+                    onclick="toggleSecret(this)" title="Click to reveal">
+                    ••••••••••••••••
+                  </code>
+                </td>
+                <td class="td-meta"><%= t.created_at ? new Date(t.created_at).toISOString().slice(0,10) : '—' %></td>
+                <td class="td-meta">
+                  <%= t.last_used ? new Date(t.last_used).toISOString().slice(0,16).replace('T',' ') : 'Never' %>
+                </td>
+                <td>
+                  <button class="btn btn-danger-sm"
+                    onclick="revokeToken('<%= t.id %>', '<%= t.label.replace(/'/g, "\\'") %>')">
+                    Revoke
+                  </button>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- API quick reference -->
+    <div class="api-ref">
+      <div class="api-ref-title">Quick Reference</div>
+      <div class="api-ref-grid">
+        <div class="api-endpoint">
+          <span class="method post">POST</span>
+          <code>/upload</code>
+          <span class="ep-desc">Upload a file (multipart, field: <em>file</em>)</span>
+        </div>
+        <div class="api-endpoint">
+          <span class="method get">GET</span>
+          <code>/files/:id</code>
+          <span class="ep-desc">Download a file (your files only)</span>
+        </div>
+        <div class="api-endpoint">
+          <span class="method head">HEAD</span>
+          <code>/files/:id</code>
+          <span class="ep-desc">Check file exists</span>
+        </div>
+        <div class="api-endpoint">
+          <span class="method del">DELETE</span>
+          <code>/files/:id</code>
+          <span class="ep-desc">Delete a file (your files only)</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- New Token Modal -->
+  <div class="modal-backdrop" id="modal" onclick="closeOnBackdrop(event)">
+    <div class="modal-box">
+      <div class="modal-stripe"></div>
+      <h2 class="modal-title">Create New Token</h2>
+
+      <div class="field">
+        <label for="tokenLabel">Token Label</label>
+        <input type="text" id="tokenLabel" placeholder="e.g. iOS App, Staging Server"
+          maxlength="120" onkeydown="if(event.key==='Enter') createToken()">
+      </div>
+
+      <div class="creds-panel" id="credsPanel">
+        <div class="creds-warning">
+          ⚠ Copy these now — they won't be fully visible again.
+        </div>
+        <div class="cred-row">
+          <div class="cred-label">API Token <span class="cred-hint">(x-token header)</span></div>
+          <div class="cred-val" id="genToken" onclick="copyVal(this)"></div>
+        </div>
+        <div class="cred-row">
+          <div class="cred-label">Signing Secret</div>
+          <div class="cred-val" id="genSecret" onclick="copyVal(this)"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="createBtn" onclick="createToken()">Generate</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openModal() {
+      document.getElementById('modal').classList.add('open');
+      document.getElementById('tokenLabel').value = '';
+      document.getElementById('credsPanel').style.display = 'none';
+      const btn = document.getElementById('createBtn');
+      btn.textContent = 'Generate';
+      btn.onclick = createToken;
+      btn.disabled = false;
+      setTimeout(() => document.getElementById('tokenLabel').focus(), 80);
+    }
+    function closeModal() { document.getElementById('modal').classList.remove('open'); }
+    function closeOnBackdrop(e) { if (e.target.id === 'modal') closeModal(); }
+
+    async function createToken() {
+      const label = document.getElementById('tokenLabel').value.trim();
+      if (!label) { document.getElementById('tokenLabel').focus(); return; }
+
+      const btn = document.getElementById('createBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generating…';
+
+      try {
+        const r    = await fetch('/dashboard/tokens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label }),
+        });
+        const data = await r.json();
+        if (data.error) { alert(data.error); btn.disabled = false; btn.textContent = 'Generate'; return; }
+
+        document.getElementById('genToken').textContent  = data.token;
+        document.getElementById('genSecret').textContent = data.secret;
+        document.getElementById('credsPanel').style.display = 'block';
+
+        // remove empty row if present
+        const emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) emptyRow.remove();
+
+        // inject new row into table
+        const tbody = document.getElementById('tokenTable');
+        const tr = document.createElement('tr');
+        tr.id = 'row-' + data.id;
+        tr.innerHTML = `
+          <td class="td-name">${escHtml(data.label)}</td>
+          <td><code class="secret-pill revealed" data-val="${escHtml(data.token)}"
+            onclick="toggleSecret(this)">${escHtml(data.token)}</code></td>
+          <td><code class="secret-pill revealed" data-val="${escHtml(data.secret)}"
+            onclick="toggleSecret(this)">${escHtml(data.secret)}</code></td>
+          <td class="td-meta">${new Date().toISOString().slice(0,10)}</td>
+          <td class="td-meta">Never</td>
+          <td><button class="btn btn-danger-sm"
+            onclick="revokeToken('${data.id}', '${escHtml(data.label)}')">Revoke</button></td>
+        `;
+        tbody.prepend(tr);
+
+        btn.textContent = 'Create Another';
+        btn.onclick = () => {
+          document.getElementById('tokenLabel').value = '';
+          document.getElementById('credsPanel').style.display = 'none';
+          btn.textContent = 'Generate';
+          btn.onclick = createToken;
+          btn.disabled = false;
+          document.getElementById('tokenLabel').focus();
+        };
+        btn.disabled = false;
+      } catch(e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+      }
+    }
+
+    async function revokeToken(id, label) {
+      if (!confirm(`Revoke token "${label}"?\nAny apps using it will lose access immediately.`)) return;
+      const r = await fetch(`/dashboard/tokens/${id}`, { method: 'DELETE' });
+      if (r.ok) {
+        const row = document.getElementById('row-' + id);
+        if (row) row.remove();
+        // show empty state if no rows left
+        const tbody = document.getElementById('tokenTable');
+        if (!tbody.querySelector('tr')) {
+          tbody.innerHTML = `<tr id="emptyRow"><td colspan="6" class="empty-cell">
+            <div class="empty-state"><div class="empty-icon">⬡</div>
+            <p>No tokens yet</p><small>Create a token to start uploading files via the API</small>
+            </div></td></tr>`;
+        }
+      } else {
+        alert('Failed to revoke token');
+      }
+    }
+
+    function toggleSecret(el) {
+      if (el.classList.contains('revealed')) {
+        el.textContent = '••••••••••••••••';
+        el.classList.remove('revealed');
+      } else {
+        el.textContent = el.dataset.val;
+        el.classList.add('revealed');
+      }
+    }
+
+    function copyVal(el) {
+      navigator.clipboard.writeText(el.textContent).then(() => {
+        const orig = el.textContent;
+        el.textContent = '✓ Copied!';
+        setTimeout(() => el.textContent = orig, 1500);
+      });
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+  </script>
+</body>
+</html>
